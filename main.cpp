@@ -2,6 +2,9 @@
 #include <thread>
 #include <mutex>
 #include <ncurses.h>
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
 
 std::mutex mx;
 bool running = true;
@@ -16,6 +19,7 @@ void makeWindows(std::vector<WINDOW*>& windowVector,int height,int width);
 WINDOW* create_newwin(int height, int width, int starty, int startx);
 void initSnake(int height, int width, std::vector<Point>& points);
 void drawSnake(WINDOW* win, std::vector<Point>& snakePosition);
+void moveSnake(std::vector<Point>& snakePosition, int windowWidth, int windowHeight);
 
 int main(int argc,char** argv)
 {
@@ -26,6 +30,7 @@ int main(int argc,char** argv)
 	std::vector<Point> bottomLeftSnake;
 	std::vector<Point> bottomRightSnake;
 	
+	srand(time(NULL));
 	initscr();
 	start_color();
 	init_pair(1,COLOR_WHITE,COLOR_RED);
@@ -47,7 +52,9 @@ int main(int argc,char** argv)
 	initSnake(height/2,width/2,upperRightSnake);
 	initSnake(height/2,width/2,bottomLeftSnake);
 	initSnake(height/2,width/2,bottomRightSnake);
-	
+
+	moveSnake(upperLeftSnake,width/2,height/2);
+
 	drawSnake(windowVector[0],upperLeftSnake);
 	drawSnake(windowVector[1],upperRightSnake);
 	drawSnake(windowVector[2],bottomLeftSnake);
@@ -94,3 +101,26 @@ void drawSnake(WINDOW* win, std::vector<Point>& snakePosition)
 	wrefresh(win);
 }
 
+
+void moveSnake(std::vector<Point>& snakePosition, int windowWidth, int windowHeight)
+{
+	Point tmp = snakePosition.back();
+	bool legalMove = false;
+	std::rotate(snakePosition.begin(),snakePosition.begin()+1,snakePosition.end());
+	
+	do
+	{
+	int moveNS = std::rand() %3 - 1;
+	int moveWE = std::rand() %3 - 1;
+	if(tmp.x+moveWE == 0 || tmp.x+moveWE == windowWidth - 1)
+		continue;
+	if(tmp.y+moveNS == 0 || tmp.y+moveNS == windowHeight - 1)
+		continue;
+
+	tmp.x+=moveWE;
+	tmp.y+=moveNS;
+	snakePosition.at(snakePosition.size()-1) = tmp;
+	legalMove=true;
+	}while(!legalMove);
+
+}
