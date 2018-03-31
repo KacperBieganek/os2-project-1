@@ -5,14 +5,16 @@
 #include <cstdlib>
 #include <ctime>
 #include <algorithm>
+#include <chrono>
+#include <unistd.h>
 
 std::mutex mx;
-bool running = true;
+volatile bool running = true;
 
 
 struct Point{
 	int x,y;
-	Point(int x,int y): x(x),y(y) {};
+	Point(int x, int y): x(x),y(y) {};
 };
 
 void makeWindows(std::vector<WINDOW*>& windowVector,int height,int width);
@@ -20,6 +22,7 @@ WINDOW* create_newwin(int height, int width, int starty, int startx);
 void initSnake(int height, int width, std::vector<Point>& points);
 void drawSnake(WINDOW* win, std::vector<Point>& snakePosition);
 void moveSnake(std::vector<Point>& snakePosition, int windowWidth, int windowHeight);
+void runSnake(WINDOW* win, std::vector<Point>* snakePosition, int windowWidth, int windowHeight);
 
 int main(int argc,char** argv)
 {
@@ -29,6 +32,7 @@ int main(int argc,char** argv)
 	std::vector<Point> upperRightSnake;
 	std::vector<Point> bottomLeftSnake;
 	std::vector<Point> bottomRightSnake;
+
 	
 	srand(time(NULL));
 	initscr();
@@ -41,26 +45,31 @@ int main(int argc,char** argv)
 	refresh();
 	
 	makeWindows(windowVector,height,width);
-	int counter=0;
+	int windowCounter=0;
 	for(auto win: windowVector)
 	{
-		wbkgd(win,COLOR_PAIR(++counter));
+		wbkgd(win,COLOR_PAIR(++windowCounter));
 		wrefresh(win);
 	}
 
 	initSnake(height/2,width/2,upperLeftSnake);
 	initSnake(height/2,width/2,upperRightSnake);
 	initSnake(height/2,width/2,bottomLeftSnake);
-	initSnake(height/2,width/2,bottomRightSnake);
+	initSnake(height/2,width/2,bottomRightSnake);	
 
-	moveSnake(upperLeftSnake,width/2,height/2);
-
-	drawSnake(windowVector[0],upperLeftSnake);
-	drawSnake(windowVector[1],upperRightSnake);
-	drawSnake(windowVector[2],bottomLeftSnake);
-	drawSnake(windowVector[3],bottomRightSnake);
+	std::vector<std::thread> threads;
 	
-	getch();
+	threads.push_back(std::thread(runSnake,windowVector[0],&upperLeftSnake,width/2,height/2));
+	threads.push_back(std::thread(runSnake,windowVector[1],&upperRightSnake,width/2,height/2));
+	threads.push_back(std::thread(runSnake,windowVector[2],&bottomLeftSnake,width/2,height/2));
+	threads.push_back(std::thread(runSnake,windowVector[3],&bottomRightSnake,width/2,height/2));
+	
+	std::this_thread::sleep_for(std::chrono::seconds(10));
+	::running = false;
+
+	for(auto& thread : threads)
+		thread.join();
+
 	endwin();
 	return 0;
 }
@@ -86,7 +95,7 @@ void initSnake(int height, int width, std::vector<Point>& points)
 {
 	for(int i=0;i<5;i++)
 	{
-		points.push_back(Point(height/2,width/2+i));
+		points.push_back(Point(width/2+i, height/2));
 	}
 }
 
@@ -96,7 +105,7 @@ void drawSnake(WINDOW* win, std::vector<Point>& snakePosition)
 	box(win,'*','*');
 	for(auto point : snakePosition)
 	{
-		mvwprintw(win,point.x,point.y,"o");
+		mvwprintw(win,point.y,point.x,"o");
 	}
 	wrefresh(win);
 }
@@ -108,19 +117,29 @@ void moveSnake(std::vector<Point>& snakePosition, int windowWidth, int windowHei
 	bool legalMove = false;
 	std::rotate(snakePosition.begin(),snakePosition.begin()+1,snakePosition.end());
 	
-	do
-	{
-	int moveNS = std::rand() %3 - 1;
-	int moveWE = std::rand() %3 - 1;
-	if(tmp.x+moveWE == 0 || tmp.x+moveWE == windowWidth - 1)
-		continue;
-	if(tmp.y+moveNS == 0 || tmp.y+moveNS == windowHeight - 1)
-		continue;
-
+	int moveNS = std::rand() %3 -1;
+	int moveWE = std::rand() %3 -1;
+	
 	tmp.x+=moveWE;
 	tmp.y+=moveNS;
-	snakePosition.at(snakePosition.size()-1) = tmp;
-	legalMove=true;
-	}while(!legalMove);
+
+	if(( tmp.x >= 1 && tmp.x <= windowWidth - 2) && (tmp.y >= 1 && tmp.y <= windowHeight - 2))
+		snakePosition.at(snakePosition.size()-1) = tmp;
 
 }
+
+
+void runSnake(WINDOW* win, std::vector<Point>* snakePosition, int windowWidth, int windowHeight)
+{
+	while(::running)
+	{
+	moveSnake(*snakePosition,windowWidth,windowHeight);	
+	{
+		std::lock_guard<std::mutex> lock(mx);
+		drawSnake(win,*snakePosition);
+	}
+		usleep(75000);
+	}
+}
+	
+
