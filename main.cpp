@@ -4,8 +4,10 @@
 #include <ncurses.h>
 
 int main(int argc,char** argv){
+	int width,height;
 	initscr();
-	printw("Hello World!!!!");
+	getmaxyx(stdscr,height,width);
+	printw("height: %d  width: %d",height,width);
 	refresh();
 	getch();
 	endwin();
