@@ -1,4 +1,4 @@
-#include "snake.h"
+#include "snake.hpp"
 #include <thread>
 #include <ctime>
 #include <memory>
@@ -26,8 +26,7 @@ int main(int argc,char** argv)
 	
 	makeWindows(windowVector,height,width);
 	int windowCounter=0;
-	for(auto win: windowVector)
-	{
+	for(auto win: windowVector){
 		snakeVector.push_back(std::make_shared<snake::Snake>(win,width/2,height/2,mutex,running));
 		wbkgd(win,COLOR_PAIR(++windowCounter));
 		wrefresh(win);
@@ -36,9 +35,8 @@ int main(int argc,char** argv)
 
 	
 	std::vector<std::thread> threads;
-	for(auto snake : snakeVector)
-	{
-	threads.push_back(std::thread(&snake::Snake::run,snake));
+	for(auto& snake : snakeVector){
+		threads.push_back(std::thread(&snake::Snake::run,snake));
 	}
 	
 	
@@ -46,9 +44,9 @@ int main(int argc,char** argv)
 	std::this_thread::sleep_for(std::chrono::seconds(10));
 	running = false;
 
-	for(auto& thread : threads)
+	for(auto& thread : threads){
 		thread.join();
-
+	}
 	endwin();
 	return 0;
 }

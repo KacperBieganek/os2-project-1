@@ -1,4 +1,4 @@
-#include "snake.h"
+#include "snake.hpp"
 #include <algorithm>
 #include <chrono>
 #include <cstdlib>
@@ -24,7 +24,7 @@ namespace snake
 	{
 		for(int i=0;i<7;i++)
 		{
-			snakePosition.push_back(Point(windowWidth/2+i,windowHeight/2));
+			snakePosition.push_back(Point{windowWidth/2+i,windowHeight/2});
 		}
 	}
 
@@ -47,6 +47,7 @@ namespace snake
 		int moveWE = std::rand() %3 -1;
 		tmp.x+=moveWE;
 		tmp.y+=moveNS;
-		if(( tmp.x >= 1 && tmp.x <= windowWidth - 2) && (tmp.y >= 1 && tmp.y <= windowHeight - 2))								                snakePosition.at(snakePosition.size()-1) = tmp;
+		if(( tmp.x >= 1 && tmp.x <= windowWidth - 2) && (tmp.y >= 1 && tmp.y <= windowHeight - 2))
+			snakePosition.at(snakePosition.size()-1) = tmp;
 	}
 }
